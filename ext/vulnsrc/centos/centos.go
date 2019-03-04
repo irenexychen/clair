@@ -33,10 +33,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/coreos/clair/database"
-	// "github.com/davecgh/go-spew/spew"
-
-	//"github.com/coreos/clair/ext/versionfmt"
-	//"github.com/coreos/clair/ext/versionfmt/rpm"
+	"github.com/coreos/clair/ext/versionfmt"
+	"github.com/coreos/clair/ext/versionfmt/rpm"
 	"github.com/coreos/clair/ext/vulnsrc"
 	"github.com/coreos/clair/pkg/commonerr"
 	"github.com/coreos/clair/pkg/httputil"
@@ -211,49 +209,47 @@ func parseCESA(cesaReader io.Reader) (vulnerabilities []database.Vulnerability, 
 	// Iterate over CESA only and collect any vulnerabilities that affect at least one package
 	var vulnName string
 	for _, cesa := range cesas.SA {
-		// log.WithField("package", "CentOS").Info("aaa THIS IS IMPORTAT (4)")
-		// str := spew.Sdump(cesa)
-
 		if strings.Contains(cesa.Text, "CESA") && len(cesa.Packages) > 0 {
 			// get vulnerability name
 			vulnName = cesa.Text
 			log.WithField("package", "CentOS").Info("aaa THIS IS IMPORTAT (4) : " + vulnName)
 
 			// get package release number?????????/ wtf is this
-
-			// 	// create vulnerability if needed
-			// vulnerability, vulnerabilityAlreadyExists := mvulnerabilities[cesa.Text]
-
-			// if !vulnerabilityAlreadyExists {
+			
 			var vuln database.Vulnerability
-			// vuln.Severity = convertSeverity(cesa.Severity + "")
+
 			vuln.Name = cesa.Text
 			vuln.Link = cesa.References
+			vuln.Description = cesa.Description
 
-//////////////////////////////////
-
-			// vuln.Packages
-
-			// if (strings.Compare(strings.ToLower(cesa.Solution), "not available") != 0 {
-			// 	vuln.FixedIn = []database.FeatureVersion{
-			// 		{
-			// 			Feature: database.Feature{
-			// 				Namespace: database.Namespace{
-			// 					Name:          "centos:" + cesa.OsRelease,
-			// 					VersionFormat: rpm.ParserName,
-			// 				},
-			// 				Name: cesa.Packages,
-			// 			},
-			// 			Version: version,
-			// 		},
-			// 	}
-			// }
 			
-			// // 	// 	pkgs := toFeature(cesa.Packages)
-			// // 	for _, p := range pkgs {
-			// // 		vulnerability.Affected = append(vulnerability.Affected, p)
-			// // 	}
-			// vulnerabilities = append(vulnerabilities, vuln)
+			vuln.Severity = database.UnknownSeverity
+			// convertSeverity(cesa.Severity)
+			
+			
+
+			for _, p := range cesa.Packages {
+				log.WithField("package", "CentOS").Info("package: " + p)
+				if strings.Compare(strings.ToLower(cesa.Solution), "not available") != 0 {
+					vuln.FixedIn = []database.FeatureVersion{
+						{
+							Feature: database.Feature{
+								Namespace: database.Namespace{
+									Name:          "centos:" + cesa.OsRelease,
+									VersionFormat: rpm.ParserName,
+								},
+								Name: p,
+							},
+							Version: versionfmt.MaxVersion,
+						},
+					}
+				}
+				// vuln.FixedIn = append(vuln.FixedIn, p)
+			}
+
+			vulnerabilities = append(vulnerabilities, vuln)
+
+			
 			// //  }
 			// // 	// export packages to proper format
 			// // 	// determine version of the package that the vulnerability affects
@@ -264,7 +260,7 @@ func parseCESA(cesaReader io.Reader) (vulnerabilities []database.Vulnerability, 
 			// // 	// store the vulnerability
 
 //////////////////////////////////
-			
+
 		}
 	}
 	return

@@ -51,12 +51,12 @@ import (
 	_ "github.com/coreos/clair/ext/notification/webhook"
 	_ "github.com/coreos/clair/ext/vulnmdsrc/nvd"
 
-	_ "github.com/coreos/clair/ext/vulnsrc/alpine"
+	//_ "github.com/coreos/clair/ext/vulnsrc/alpine"
 	//_ "github.com/coreos/clair/ext/vulnsrc/debian"
 	//_ "github.com/coreos/clair/ext/vulnsrc/oracle"
 	//_ "github.com/coreos/clair/ext/vulnsrc/rhel"
+	_ "github.com/coreos/clair/ext/vulnsrc/centos"
 	_ "github.com/coreos/clair/ext/vulnsrc/ubuntu"
-	//_ "github.com/coreos/clair/ext/vulnsrc/centos"
 )
 
 func waitForSignals(signals ...os.Signal) {
