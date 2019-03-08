@@ -137,12 +137,16 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 	}
 
 	vs, err := parseCESA(string(data))
+	///Need to wait for this to complete
 	if err != nil {
 		return resp, err
 	}
+
+	log.WithField("package", "CentOS").Info("start populating CESA vulnerabilities")
 	for _, v := range vs {
 		resp.Vulnerabilities = append(resp.Vulnerabilities, v)
 	}
+	log.WithField("package", "CentOS").Info("finished fetching CESA vulnerabilities")
 
 	r_cve, err := httputil.GetWithUserAgent(cveURL)
 	if err != nil {
@@ -164,9 +168,12 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 	if err != nil {
 		return resp, err
 	}
+
+	log.WithField("package", "CentOS").Info("start populating CVE vulnerabilities")
 	for _, v := range vs {
 		resp.Vulnerabilities = append(resp.Vulnerabilities, v)
 	}
+	log.WithField("package", "CentOS").Info("finished fetching CVE vulnerabilities")
 
 	return resp, nil
 }
@@ -215,6 +222,8 @@ func parseCESA(cesaData string) (vulnerabilities []database.Vulnerability, err e
 			vulnerabilities = append(vulnerabilities, vuln)
 		}
 	}
+	log.WithField("package", "CentOS").Info("finished parsing CESA vulnerabilities")
+
 	return
 }
 
@@ -279,6 +288,8 @@ func parseCVE(cveData string) (vulnerabilities []database.Vulnerability, err err
 			// SKIP THIS CVE
 		}
 	}
+	log.WithField("package", "CentOS").Info("finished parsing CVE vulnerabilities")
+
 	return
 }
 
