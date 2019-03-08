@@ -164,6 +164,7 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 	return resp, nil
 }
 
+
 func (u *updater) Clean() {}
 
 func parseRHSA(ovalReader io.Reader) (vulnerabilities []database.Vulnerability, err error) {
