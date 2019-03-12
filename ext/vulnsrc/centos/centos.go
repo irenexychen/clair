@@ -195,9 +195,10 @@ func parseCESA(cesaData string) (vulnerabilities []database.Vulnerability, err e
 	for _, sa := range cesas.SA {
 		if strings.Contains(sa.XMLName.Local, "CESA") && len(sa.Packages) > 0 {
 			var vuln database.Vulnerability
+			url := strings.Split(sa.References, " ")
 
 			vuln.Name = sa.XMLName.Local
-			vuln.Link = sa.References
+			vuln.Link = url[0]
 			vuln.Description = sa.Description
 			vuln.Severity = convertSeverity(sa.Severity)
 
@@ -247,10 +248,11 @@ func parseCVE(cveData string) (vulnerabilities []database.Vulnerability, err err
 		if err == nil || httputil.Status2xx(r) {
 			var c CVE
 			json.Unmarshal([]byte(data), &c)
+			url := strings.Split(c.Bugzilla.URL, " ")
 
 			var vuln database.Vulnerability
 			vuln.Name = c.Name
-			vuln.Link = c.Bugzilla.URL
+			vuln.Link = url[0]
 			vuln.Description = c.Bugzilla.Description
 			vuln.Severity = convertSeverity(c.ThreatSeverity)
 
