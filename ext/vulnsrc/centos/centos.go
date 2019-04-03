@@ -24,7 +24,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unicode"
 
 	log "github.com/sirupsen/logrus"
 
@@ -120,9 +119,6 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 	if err != nil {
 		return resp, err
 	}
-
-	//////////
-
 	rConv, err := httputil.GetWithUserAgent(conversionURL)
 	if err != nil {
 		log.WithError(err).Error("Could not get RHSA to CVE conversion")
@@ -138,12 +134,7 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 		log.WithError(err).Error("could not read RHSA to CVE conversion response")
 		return resp, commonerr.ErrCouldNotParse
 	}
-	rhsaToCve, err := parseConv(string(data))
-	if err != nil {
-		return resp, err
-	}
-
-	//////////
+	rhsaToCve := parseConv(string(data))
 
 	rCesa, err := httputil.GetWithUserAgent(cesaURL)
 	if err != nil {
@@ -160,18 +151,11 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 		log.WithError(err).Error("could not read CESA body")
 		return resp, commonerr.ErrCouldNotParse
 	}
-	listFromCesa, errCesa := parseCESA(string(data), rhsaToCve)
-	if errCesa != nil {
-		return resp, errCesa
+	listFromCesa, err := parseCESA(string(data), rhsaToCve)
+	if err != nil {
+		return resp, err
 	}
-
-	// log.WithField("package", "CentOS").Info("start populating CESA vulnerabilities")
-	// for _, v := range vsCesa {
-	// 	resp.Vulnerabilities = append(resp.Vulnerabilities, v)
-	// }
-	log.WithField("package", "CentOS").Info("finished fetching CESA vulnerabilities")
-
-	////////
+	log.WithField("package", "CentOS").Info("finished fetching CESA list of vulnerabilities")
 
 	rCve, err := httputil.GetWithUserAgent(cveURL)
 	if err != nil {
@@ -192,16 +176,14 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 	if errCve != nil {
 		return resp, errCve
 	}
-
-	log.WithField("package", "CentOS").Info("start populating CVE vulnerabilities")
 	for _, v := range vsCve {
 		resp.Vulnerabilities = append(resp.Vulnerabilities, v)
 	}
-	log.WithField("package", "CentOS").Info("finished fetching CVE vulnerabilities")
+	log.WithField("package", "CentOS").Info("finished populating CVE vulnerabilities")
 
 	return resp, nil
 }
-func parseConv(conversionData string) (rhsaToCve map[string][]string, err error) {
+func parseConv(conversionData string) (rhsaToCve map[string][]string) {
 	rhsaToCve = make(map[string][]string)
 	rhsa := strings.Split(conversionData, "\n")
 	for _, r := range rhsa {
@@ -209,22 +191,17 @@ func parseConv(conversionData string) (rhsaToCve map[string][]string, err error)
 		if len(info) > 1 {
 			cves := strings.Split(info[1], ",")
 			rhsaToCve[info[0]] = cves
-		} else {
-			log.WithField("nani", "nani").Info(info)
 		}
 	}
-
-	return rhsaToCve, err
+	return rhsaToCve
 }
 
 func parseCESA(cesaData string, rhsaToCve map[string][]string) (CVElistFromCESA map[string]bool, err error) {
-	// func parseCESA(cesaReader io.Reader) (vulnerabilities []database.Vulnerability, err error) {
 	log.WithField("package", "CentOS").Info("Parsing CESA xml")
 
 	var cesas CESA
 	CVElistFromCESA = make(map[string]bool)
 	err = xml.Unmarshal([]byte(cesaData), &cesas)
-
 	if err != nil {
 		log.WithError(err).Error("could not decode CESA's XML")
 		return CVElistFromCESA, commonerr.ErrCouldNotParse
@@ -251,28 +228,24 @@ func parseCVE(cveData string, listFromCesa map[string]bool) (vulnerabilities []d
 
 	var cves CVES
 	err = json.Unmarshal([]byte(cveData), &cves)
-
 	if err != nil {
 		log.WithError(err).Error("could not decode CVES json")
 		return vulnerabilities, commonerr.ErrCouldNotParse
 	}
-	log.WithField("package", "CentOS").Info("Decoded CVES json")
-
 	for _, cve := range cves {
 		if (len(cve.AffectedPackages) > 0) && (cve.Severity != "") {
 			listFromCesa[cve.CVEName] = true
 		}
 	}
+	log.WithField("package", "CentOS").Info("Compiled final list of CVEs to find")
 
 	for cve := range listFromCesa {
 		r, err := httputil.GetWithUserAgent(baseURL + cve + ".json")
 		defer r.Body.Close()
 		data, err := ioutil.ReadAll(r.Body)
-
 		if err == nil || httputil.Status2xx(r) { //if success
 			var c CVE
 			json.Unmarshal([]byte(data), &c)
-
 			url := strings.Split(c.Bugzilla.URL, " ")
 			var vuln database.Vulnerability
 			vuln.Name = c.Name
@@ -283,10 +256,8 @@ func parseCVE(cveData string, listFromCesa map[string]bool) (vulnerabilities []d
 
 			for _, pack := range c.PackageState {
 				nameP, versionP := extractCVEInfo(c.UpstreamFix, pack.PackageName)
-				// fmt.Println(nameP, versionP)
-				rhel, _ := regexp.Match(`red hat enterprise linux .`, []byte(strings.ToLower(pack.ProductName)))
-				if !packs[nameP] && rhel && (strings.ToLower(pack.FixState) != "not affected") {
-					packs[nameP] = true
+				rhelPlatform, _ := regexp.Match(`red hat enterprise linux .`, []byte(strings.ToLower(pack.ProductName)))
+				if (!packs[nameP]) && rhelPlatform && (strings.ToLower(pack.FixState) != "not affected") {
 					featureVersion := database.FeatureVersion{
 						Feature: database.Feature{
 							Namespace: database.Namespace{
@@ -297,49 +268,40 @@ func parseCVE(cveData string, listFromCesa map[string]bool) (vulnerabilities []d
 						},
 						Version: versionP,
 					}
-					// fmt.Println(featureVersion)
-					// fmt.Println("into ...")
 					vuln.FixedIn = append(vuln.FixedIn, featureVersion)
-					// fmt.Println(len(vuln.FixedIn), vuln.FixedIn)
-					// fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-
+					packs[nameP] = true //mark as added
 				}
 			}
-			if len(vuln.FixedIn) > 0 {
-				fmt.Println(c.Name + "added !!!!!!! " + string(len(vulnerabilities)))
+			if len(vuln.FixedIn) > 0 { //assert CVE has relevant packages
 				vulnerabilities = append(vulnerabilities, vuln)
-			} else {
-				fmt.Println("no affected packages related to " + c.Name)
 			}
 		} else {
 			log.WithError(err).Error("could not download " + cve + " from RH API update, skipping")
-			// return resp, commonerr.ErrCouldNotDownload
 			// SKIP THIS CVE
 		}
 	}
 	log.WithField("package", "CentOS").Info("finished parsing CVE vulnerabilities")
-
 	return
 }
 
-func resolveCESAName(URLs string, rhsaToCve map[string][]string) (cves []string) {
-	//convert CESA name to CVE(s) equivalent
-	cves = []string{}
+func resolveCESAName(URLs string, rhsaToCve map[string][]string) (cveNames []string) {
+	//convert CESA name to CVE(s) equivalent either through RHSA code or through lists.centos.org
+	cveNames = []string{}
 	urls := strings.Split(URLs, " ")
 	for _, u := range urls {
 		if strings.Contains(u, "RHSA") {
-			cves = rhsaToCve[u[strings.Index(u, "RHSA"):]]
+			cveNames = rhsaToCve[u[strings.Index(u, "RHSA"):]]
 		} else if strings.Contains(u, "lists.centos.org") {
 			resp, _ := httputil.GetWithUserAgent(u)
 			defer resp.Body.Close()
 			page, _ := ioutil.ReadAll(resp.Body)
 			if strings.Contains(string(page), "CVE") {
 				temp := (string(page))[strings.Index(string(page), "CVE"):]
-				cves = []string{strings.Split(temp, " ")[0]}
+				cveNames = []string{strings.Split(temp, " ")[0]}
 			}
 		}
 	}
-	return cves
+	return cveNames
 }
 
 func convertSeverity(sev string) database.Severity {
@@ -358,22 +320,6 @@ func convertSeverity(sev string) database.Severity {
 		log.WithField("severity", sev).Warning("could not determine vulnerability severity")
 		return database.UnknownSeverity
 	}
-}
-
-func extractCESAInfo(s string) (nameP string, versionP string) {
-	s = strings.Replace(s, ".rpm", "", 1)
-	s = strings.Replace(s, ".src", "", 1)
-	s = strings.Replace(s, ".x86_64", "", 1)
-	s = strings.Replace(s, ".i686", "", 1)
-
-	for i, n := range s {
-		if unicode.IsDigit(n) && i > 2 {
-			nameP = s[:i-1]
-			versionP = s[i:]
-			return nameP, versionP
-		}
-	}
-	return s, s
 }
 
 func extractCVEInfo(s string, originalName string) (nameP string, versionP string) {
