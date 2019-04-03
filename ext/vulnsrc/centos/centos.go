@@ -237,7 +237,6 @@ func parseCESA(cesaData string, rhsaToCve map[string][]string) (CVElistFromCESA 
 			convertedNames := resolveCESAName(sa.References, rhsaToCve)
 			for _, name := range convertedNames {
 				if sa.Severity != "" {
-					fmt.Println(name, CVElistFromCESA[name])
 					CVElistFromCESA[name] = true
 				}
 			}
@@ -270,17 +269,16 @@ func parseCVE(cveData string, listFromCesa map[string]bool) (vulnerabilities []d
 		defer r.Body.Close()
 		data, err := ioutil.ReadAll(r.Body)
 
-		if err == nil || httputil.Status2xx(r) {
+		if err == nil || httputil.Status2xx(r) { //if success
 			var c CVE
 			json.Unmarshal([]byte(data), &c)
-			url := strings.Split(c.Bugzilla.URL, " ")
 
+			url := strings.Split(c.Bugzilla.URL, " ")
 			var vuln database.Vulnerability
 			vuln.Name = c.Name
 			vuln.Link = url[0]
 			vuln.Description = c.Bugzilla.Description
 			vuln.Severity = convertSeverity(c.ThreatSeverity)
-
 			packs := make(map[string]bool)
 
 			for _, pack := range c.PackageState {
@@ -299,10 +297,20 @@ func parseCVE(cveData string, listFromCesa map[string]bool) (vulnerabilities []d
 						},
 						Version: versionP,
 					}
+					fmt.Println(featureVersion)
+					fmt.Println("into ...")
 					vuln.FixedIn = append(vuln.FixedIn, featureVersion)
+					fmt.Println(len(vuln.FixedIn), vuln.FixedIn)
+					fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
 				}
 			}
-			vulnerabilities = append(vulnerabilities, vuln)
+			if len(vuln.FixedIn) > 0 {
+				fmt.Println(c.Name + "added !!!!!!! " + string(len(vulnerabilities)))
+				vulnerabilities = append(vulnerabilities, vuln)
+			} else {
+				fmt.Println("no packages in " + c.Name)
+			}
 		} else {
 			log.WithError(err).Error("could not download " + cve + " from RH API update, skipping")
 			// return resp, commonerr.ErrCouldNotDownload
