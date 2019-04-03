@@ -297,11 +297,11 @@ func parseCVE(cveData string, listFromCesa map[string]bool) (vulnerabilities []d
 						},
 						Version: versionP,
 					}
-					fmt.Println(featureVersion)
-					fmt.Println("into ...")
+					// fmt.Println(featureVersion)
+					// fmt.Println("into ...")
 					vuln.FixedIn = append(vuln.FixedIn, featureVersion)
-					fmt.Println(len(vuln.FixedIn), vuln.FixedIn)
-					fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+					// fmt.Println(len(vuln.FixedIn), vuln.FixedIn)
+					// fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 
 				}
 			}
@@ -309,7 +309,7 @@ func parseCVE(cveData string, listFromCesa map[string]bool) (vulnerabilities []d
 				fmt.Println(c.Name + "added !!!!!!! " + string(len(vulnerabilities)))
 				vulnerabilities = append(vulnerabilities, vuln)
 			} else {
-				fmt.Println("no packages in " + c.Name)
+				fmt.Println("no affected packages related to " + c.Name)
 			}
 		} else {
 			log.WithError(err).Error("could not download " + cve + " from RH API update, skipping")

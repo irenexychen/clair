@@ -15,6 +15,7 @@
 package clair
 
 import (
+	"fmt"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -299,7 +300,12 @@ func addMetadata(datastore database.Datastore, vulnerabilities []database.Vulner
 			appender.PurgeCache()
 		}(n, a)
 	}
+	for i, v := range vulnerabilities {
+		fmt.Println(i, " : ", v)
+	}
+
 	wg.Wait()
+
 	return vulnerabilities
 }
 
