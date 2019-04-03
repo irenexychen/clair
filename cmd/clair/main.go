@@ -56,7 +56,7 @@ import (
 	//_ "github.com/coreos/clair/ext/vulnsrc/oracle"
 	_ "github.com/coreos/clair/ext/vulnsrc/centos"
 	//_ "github.com/coreos/clair/ext/vulnsrc/rhel"
-	//_ "github.com/coreos/clair/ext/vulnsrc/ubuntu"
+	_ "github.com/coreos/clair/ext/vulnsrc/ubuntu"
 )
 
 func waitForSignals(signals ...os.Signal) {
