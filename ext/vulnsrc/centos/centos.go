@@ -179,7 +179,6 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 }
 
 func parseCESA(cesaData string) (vulnerabilities []database.Vulnerability, err error) {
-	// func parseCESA(cesaReader io.Reader) (vulnerabilities []database.Vulnerability, err error) {
 	log.WithField("package", "CentOS").Info("Parsing CESA xml")
 
 	var cesas CESA
