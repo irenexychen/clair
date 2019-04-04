@@ -264,18 +264,8 @@ func parseCVE(cveData string) (vulnerabilities []database.Vulnerability, err err
 			vuln.Severity = convertSeverity(c.ThreatSeverity)
 
 			for _, pack := range c.PackageState {
-				// var versionP string
-				// switch strings.ToLower(strings.TrimSpace(pack.FixState)) {
-				// case "new", "affected", "will not fix":
-				// 	versionP = versionfmt.MaxVersion
-				// case "not affected":
-				// 	versionP = versionfmt.MinVersion
-				// default:
-				// 	versionP = strings.TrimSpace(pack.FixState)
-				// }
-
 				rhelPlatform, _ := regexp.Match(`red hat enterprise linux .`, []byte(strings.ToLower(pack.ProductName)))
-				if (!packs[nameP]) && rhelPlatform && (strings.ToLower(pack.FixState) != "not affected") {
+				if rhelPlatform && (strings.ToLower(pack.FixState) != "not affected") {
 					featureVersion := database.FeatureVersion{
 						Feature: database.Feature{
 							Namespace: database.Namespace{
