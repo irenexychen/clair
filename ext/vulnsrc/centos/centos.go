@@ -296,6 +296,7 @@ func parseCVE(cveData string) (vulnerabilities []database.Vulnerability, err err
 				}
 			}
 			vulnerabilities = append(vulnerabilities, vuln)
+
 		} else {
 			log.WithError(err).Error("could not download " + cve.CVEName + " from RH API update, skipping")
 			// return resp, commonerr.ErrCouldNotDownload
