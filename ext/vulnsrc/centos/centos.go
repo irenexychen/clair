@@ -111,7 +111,16 @@ type CVE struct {
 		PackageName string `json:"package_name"`
 		Cpe         string `json:"cpe"`
 	} `json:"package_state"`
-	Name string `json:"name"`
+	AffectedRelease []struct {
+		ProductName string `json:"product_name"`
+		ReleaseDate string `json:"release_date"`
+		Advisory    string `json:"advisory"`
+		Package     string `json:"package"`
+		Cpe         string `json:"cpe"`
+	} `json:"affected_release"`
+	UpstreamFix string   `json:"upstream_fix"`
+	References  []string `json:"references"`
+	Name        string   `json:"name"`
 }
 
 func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateResponse, err error) {
@@ -277,13 +286,16 @@ func parseCVE(cveData string, listFromCesa map[string]bool) (vulnerabilities []d
 			listFromCesa[cve.CVEName] = true
 		}
 	}
+	count := 0
 
 	for cve := range listFromCesa {
 		r, err := httputil.GetWithUserAgent(baseURL + cve + ".json")
 		defer r.Body.Close()
 		data, err := ioutil.ReadAll(r.Body)
 
-		if err == nil || httputil.Status2xx(r) {
+		if err == nil && httputil.Status2xx(r) {
+			count = count + 1
+			fmt.Println(count)
 			var c CVE
 			json.Unmarshal([]byte(data), &c)
 			url := strings.Split(c.Bugzilla.URL, " ")
@@ -294,18 +306,21 @@ func parseCVE(cveData string, listFromCesa map[string]bool) (vulnerabilities []d
 			vuln.Description = c.Bugzilla.Description
 			vuln.Severity = convertSeverity(c.ThreatSeverity)
 
-			for _, pack := range c.PackageState {
+			for _, pack := range c.AffectedRelease {
 				rhelPlatform, _ := regexp.Match(`red hat enterprise linux .`, []byte(strings.ToLower(pack.ProductName)))
-				if rhelPlatform && (strings.ToLower(pack.FixState) != "not affected") {
+
+				if rhelPlatform && pack.Package != "" {
+					nameP, versionP := extractCVEInfo(pack.Package)
+
 					featureVersion := database.FeatureVersion{
 						Feature: database.Feature{
 							Namespace: database.Namespace{
 								Name:          "centos:" + pack.ProductName[len(pack.ProductName)-1:],
 								VersionFormat: rpm.ParserName,
 							},
-							Name: strings.TrimSpace(pack.PackageName),
+							Name: nameP,
 						},
-						Version: versionfmt.MaxVersion,
+						Version: versionP,
 					}
 					vuln.FixedIn = append(vuln.FixedIn, featureVersion)
 				}
@@ -321,9 +336,9 @@ func parseCVE(cveData string, listFromCesa map[string]bool) (vulnerabilities []d
 	}
 	log.WithField("package", "CentOS").Info("finished parsing CVE vulnerabilities")
 
-	for _, v := range vulnerabilities {
-		fmt.Println(v)
-	}
+	// for _, v := range vulnerabilities {
+	// 	fmt.Println(v)
+	// }
 	fmt.Println(len(vulnerabilities))
 
 	return vulnerabilities, nil
@@ -365,4 +380,19 @@ func resolveCESAName(URLs string, rhsaToCve map[string][]string) (cveNames []str
 		}
 	}
 	return cveNames
+}
+
+func extractCVEInfo(packInfo string) (nameP string, versionP string) {
+	re := regexp.MustCompile(`(-| )(1|2|3|4|5|6|7|8|9|0)`)
+	splitIndex := re.FindStringIndex(packInfo)
+	if len(splitIndex) >= 2 {
+		i := splitIndex[0]
+		nameP = strings.Replace(strings.ToLower(strings.TrimSpace(packInfo[:i])), " ", "-", -1)
+		versionP = strings.ToLower(strings.TrimSpace(packInfo[i+1:]))
+		return nameP, versionP
+	} else {
+		fmt.Println(packInfo)
+	}
+	versionP = versionfmt.MaxVersion
+	return packInfo, versionP
 }
