@@ -258,10 +258,6 @@ func parseCVE(cveData string) (vulnerabilities []database.Vulnerability, err err
 
 			for _, pack := range c.PackageState {
 				var versionP string
-				//err = versionfmt.Valid(rpm.ParserName, pack.FixState)
-				//if err != nil {
-				//	log.WithError(err).WithField("version", pack.FixState).Warning("could not parse package version. skipping")
-				//} else {
 				switch strings.ToLower(strings.TrimSpace(pack.FixState)) {
 				case "new", "affected", "will not fix":
 					versionP = versionfmt.MaxVersion
