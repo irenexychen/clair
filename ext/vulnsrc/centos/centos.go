@@ -124,31 +124,31 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 
 	//////////
 
-	r_cesa, err := httputil.GetWithUserAgent(cesaURL)
-	if err != nil {
-		log.WithError(err).Error("could not download CESA's errata update")
-		return resp, commonerr.ErrCouldNotDownload
-	}
-	defer r_cesa.Body.Close()
-	if !httputil.Status2xx(r_cesa) {
-		log.WithField("StatusCode", r_cesa.StatusCode).Error("Failed to update CentOS CESA db")
-		return resp, commonerr.ErrCouldNotDownload
-	}
-	data, err := ioutil.ReadAll(r_cesa.Body)
-	if err != nil {
-		log.WithError(err).Error("could not read CESA body")
-		return resp, commonerr.ErrCouldNotParse
-	}
-	vs_cesa, err_cesa := parseCESA(string(data))
-	if err_cesa != nil {
-		return resp, err
-	}
+	// r_cesa, err := httputil.GetWithUserAgent(cesaURL)
+	// if err != nil {
+	// 	log.WithError(err).Error("could not download CESA's errata update")
+	// 	return resp, commonerr.ErrCouldNotDownload
+	// }
+	// defer r_cesa.Body.Close()
+	// if !httputil.Status2xx(r_cesa) {
+	// 	log.WithField("StatusCode", r_cesa.StatusCode).Error("Failed to update CentOS CESA db")
+	// 	return resp, commonerr.ErrCouldNotDownload
+	// }
+	// data, err := ioutil.ReadAll(r_cesa.Body)
+	// if err != nil {
+	// 	log.WithError(err).Error("could not read CESA body")
+	// 	return resp, commonerr.ErrCouldNotParse
+	// }
+	// vs_cesa, err_cesa := parseCESA(string(data))
+	// if err_cesa != nil {
+	// 	return resp, err
+	// }
 
-	log.WithField("package", "CentOS").Info("start populating CESA vulnerabilities")
-	for _, v := range vs_cesa {
-		resp.Vulnerabilities = append(resp.Vulnerabilities, v)
-	}
-	log.WithField("package", "CentOS").Info("finished fetching CESA vulnerabilities")
+	// log.WithField("package", "CentOS").Info("start populating CESA vulnerabilities")
+	// for _, v := range vs_cesa {
+	// 	resp.Vulnerabilities = append(resp.Vulnerabilities, v)
+	// }
+	// log.WithField("package", "CentOS").Info("finished fetching CESA vulnerabilities")
 
 	//////////
 
@@ -159,10 +159,10 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 	}
 	defer r_cve.Body.Close()
 	if !httputil.Status2xx(r_cve) {
-		log.WithField("StatusCode", r_cesa.StatusCode).Error("Failed to update CentOS CVE db from API")
+		log.WithField("StatusCode", r_cve.StatusCode).Error("Failed to update CentOS CVE db from API")
 		return resp, commonerr.ErrCouldNotDownload
 	}
-	data, err = ioutil.ReadAll(r_cve.Body)
+	data, err := ioutil.ReadAll(r_cve.Body)
 	if err != nil {
 		log.WithError(err).Error("could not read CVE body")
 		return resp, commonerr.ErrCouldNotParse
