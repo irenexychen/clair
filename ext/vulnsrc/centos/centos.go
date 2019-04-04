@@ -120,33 +120,33 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 		return resp, err
 	}
 
-	r_cesa, err := httputil.GetWithUserAgent(cesaURL)
-	if err != nil {
-		log.WithError(err).Error("could not download CESA's errata update")
-		return resp, commonerr.ErrCouldNotDownload
-	}
-	defer r_cesa.Body.Close()
-	if !httputil.Status2xx(r_cesa) {
-		log.WithField("StatusCode", r_cesa.StatusCode).Error("Failed to update CentOS CESA db")
-		return resp, commonerr.ErrCouldNotDownload
-	}
-	data, err := ioutil.ReadAll(r_cesa.Body)
-	if err != nil {
-		log.WithError(err).Error("could not read CESA body")
-		return resp, commonerr.ErrCouldNotParse
-	}
+	// r_cesa, err := httputil.GetWithUserAgent(cesaURL)
+	// if err != nil {
+	// 	log.WithError(err).Error("could not download CESA's errata update")
+	// 	return resp, commonerr.ErrCouldNotDownload
+	// }
+	// defer r_cesa.Body.Close()
+	// if !httputil.Status2xx(r_cesa) {
+	// 	log.WithField("StatusCode", r_cesa.StatusCode).Error("Failed to update CentOS CESA db")
+	// 	return resp, commonerr.ErrCouldNotDownload
+	// }
+	// data, err := ioutil.ReadAll(r_cesa.Body)
+	// if err != nil {
+	// 	log.WithError(err).Error("could not read CESA body")
+	// 	return resp, commonerr.ErrCouldNotParse
+	// }
 
-	vs, err := parseCESA(string(data))
-	///Need to wait for this to complete
-	if err != nil {
-		return resp, err
-	}
+	// vs, err := parseCESA(string(data))
+	// ///Need to wait for this to complete
+	// if err != nil {
+	// 	return resp, err
+	// }
 
-	log.WithField("package", "CentOS").Info("start populating CESA vulnerabilities")
-	for _, v := range vs {
-		resp.Vulnerabilities = append(resp.Vulnerabilities, v)
-	}
-	log.WithField("package", "CentOS").Info("finished fetching CESA vulnerabilities")
+	// log.WithField("package", "CentOS").Info("start populating CESA vulnerabilities")
+	// for _, v := range vs {
+	// 	resp.Vulnerabilities = append(resp.Vulnerabilities, v)
+	// }
+	// log.WithField("package", "CentOS").Info("finished fetching CESA vulnerabilities")
 
 	r_cve, err := httputil.GetWithUserAgent(cveURL)
 	if err != nil {
