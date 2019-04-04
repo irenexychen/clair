@@ -155,16 +155,16 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 	}
 	defer r_cve.Body.Close()
 	if !httputil.Status2xx(r_cve) {
-		log.WithField("StatusCode", r_cesa.StatusCode).Error("Failed to update CentOS CVE db from API")
+		log.WithField("StatusCode", r_cve.StatusCode).Error("Failed to update CentOS CVE db from API")
 		return resp, commonerr.ErrCouldNotDownload
 	}
-	data, err = ioutil.ReadAll(r_cve.Body)
+	data, err := ioutil.ReadAll(r_cve.Body)
 	if err != nil {
 		log.WithError(err).Error("could not read CVE body")
 		return resp, commonerr.ErrCouldNotParse
 	}
 
-	vs, err = parseCVE(string(data))
+	vs, err := parseCVE(string(data))
 	if err != nil {
 		return resp, err
 	}
