@@ -15,9 +15,7 @@
 package clair
 
 import (
-	"fmt"
 	"math/rand"
-	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -304,27 +302,9 @@ func addMetadata(datastore database.Datastore, vulnerabilities []database.Vulner
 
 	wg.Wait()
 
-	for i, vulnerability := range vulnerabilities {
-		if len(vulnerability.Name) > 128 {
-			fmt.Println(len(vulnerability.Name))
-			fmt.Println(vulnerability.Name)
-			fmt.Println("------------------ " + strconv.Itoa(i) + " -------------------")
-		} else if len(vulnerability.Link) > 128 {
-			fmt.Println(len(vulnerability.Link))
-			fmt.Println(vulnerability.Link)
-			fmt.Println("------------------ " + strconv.Itoa(i) + " -------------------")
-		} else {
-			for _, fix := range vulnerability.FixedBy {
-				f := reflect.ValueOf(fix)
-				ver := f.FieldByName("Version")
-				if ver.Len() > 128 {
-					fmt.Println(ver.Len())
-					fmt.Println(ver)
-					fmt.Println("------------------ " + strconv.Itoa(i) + " -------------------")
-				}
-			}
-		}
-	}
+	// for i, vulnerability := range vulnerabilities {
+	// 	fmt.Println(i, vulnerability)
+	// }
 
 	return vulnerabilities
 }
