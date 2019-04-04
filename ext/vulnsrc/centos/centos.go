@@ -37,11 +37,11 @@ import (
 )
 
 const (
-	cesaURL = "https://cefs.b-cdn.net/errata.latest.xml"
-	cveURL  = "https://access.redhat.com/labs/securitydataapi/cve.json"
-
-	updaterFlag = "centosUpdater"
-	//affectedType = database.BinaryPackage
+	cesaURL       = "https://cefs.b-cdn.net/errata.latest.xml"
+	baseURL       = "https://access.redhat.com/labs/securitydataapi/cve/"
+	cveURL        = "https://access.redhat.com/labs/securitydataapi/cve.json"
+	conversionURL = "https://www.redhat.com/security/data/metrics/rhsamapcpe.txt"
+	updaterFlag   = "centosUpdater"
 )
 
 type updater struct{}
