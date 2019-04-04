@@ -39,9 +39,9 @@ import (
 )
 
 const (
-	cesaURL = "https://cefs.b-cdn.net/errata.latest.xml"
-	cveURL  = "https://access.redhat.com/labs/securitydataapi/cve.json"
-	// ovalURL      =   "https://access.redhat.com/labs/securitydataapi/oval.json"
+	cesaURL     = "https://cefs.b-cdn.net/errata.latest.xml"
+	cveURL      = "https://access.redhat.com/labs/securitydataapi/cve.json"
+	baseURL     = "https://access.redhat.com/labs/securitydataapi/cve/"
 	updaterFlag = "centosUpdater"
 )
 
@@ -114,15 +114,6 @@ type CVE struct {
 	UpstreamFix string `json:"upstream_fix"`
 }
 
-// type OVAL []struct {
-// 	RHSA                    string        `json:"RHSA"`
-// 	Severity                string        `json:"severity"`
-// 	Date                    time.Time     `json:"released_on"`
-// 	CVEs                    []string      `json:"CVEs"`
-// 	Bugzillas               []string      `json:"bugzillas"`
-// 	ResourceURL             string        `json:"resource_url"`
-// }
-
 func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateResponse, err error) {
 	log.WithField("package", "CentOS").Info("start fetching vulnerabilities")
 
@@ -161,29 +152,6 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 
 	//////////
 
-	// r_oval, err := httputil.GetWithUserAgent(ovalURL)
-	// if err != nil {
-	// 	log.WithError(err).Error("could not download OVAL update")
-	// 	return resp, commonerr.ErrCouldNotDownload
-	// }
-	// defer r_oval.Body.Close()
-	// if !httputil.Status2xx(r_oval) {
-	// 	log.WithField("StatusCode", r_oval.StatusCode).Error("Failed to update CentOS CESA db")
-	// 	return resp, commonerr.ErrCouldNotDownload
-	// }
-	// data, err := ioutil.ReadAll(r_oval.Body)
-	// if err != nil {
-	// 	log.WithError(err).Error("could not read CESA body")
-	// 	return resp, commonerr.ErrCouldNotParse
-	// }
-
-	// vs, err_oval := parseCESA(string(data))
-	// if err_oval != nil {
-	// 	return resp, err
-	// }
-
-	//////////
-
 	r_cve, err := httputil.GetWithUserAgent(cveURL)
 	if err != nil {
 		log.WithError(err).Error("could not download CVEs from RH API update")
@@ -209,17 +177,6 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 		resp.Vulnerabilities = append(resp.Vulnerabilities, v)
 	}
 	log.WithField("package", "CentOS").Info("finished fetching CVE vulnerabilities")
-
-	//// Post processing of data ////
-
-	// RHSAmapCVE := make(map[string]string) //bidirectional
-
-	// for _, v := range vs_oval {
-	// 	for _, c := range v.CVEs {
-	// 		map[c] = RHSA
-	// 	}
-	// 	resp.Vulnerabilities = append(resp.Vulnerabilities, v)
-	// }
 
 	return resp, nil
 }
