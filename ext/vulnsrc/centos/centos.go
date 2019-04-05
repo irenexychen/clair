@@ -241,7 +241,7 @@ func parseCESA(cesaData string, rhsaToCve map[string][]string) (vulnerabilities 
 				vuln.Severity = convertSeverity(sa.Severity)
 				for _, pack := range sa.Packages {
 					err = versionfmt.Valid(rpm.ParserName, strings.TrimSpace(pack))
-					// _, versionP := parseRPM(pack)
+					_, versionP := parseRPM(pack)
 					if err != nil {
 						log.WithError(err).WithField("version", pack).Warning("could not parse package version. skipping")
 					} else {
@@ -253,7 +253,7 @@ func parseCESA(cesaData string, rhsaToCve map[string][]string) (vulnerabilities 
 								},
 								Name: strings.TrimSpace(pack),
 							},
-							Version: versionfmt.MaxVersion,
+							Version: versionP,
 						}
 						vuln.FixedIn = append(vuln.FixedIn, featureVersion)
 					}
@@ -310,7 +310,6 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 							default:
 								versionP = strings.TrimSpace(pack.FixState)
 							}
-							fmt.Println(versionP)
 							featureVersion := database.FeatureVersion{
 								Feature: database.Feature{
 									Namespace: database.Namespace{
@@ -319,7 +318,7 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 									},
 									Name: pack.PackageName,
 								},
-								Version: versionfmt.MaxVersion,
+								Version: versionP,
 							}
 							vuln.FixedIn = append(vuln.FixedIn, featureVersion)
 						}
@@ -329,7 +328,6 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 						rhelPlatform, _ := regexp.Match(`red hat enterprise linux .`, []byte(strings.ToLower(pack.ProductName)))
 						if rhelPlatform && pack.Package != "" { // RHEL
 							nameP, versionP := parseRPM(pack.Package)
-							fmt.Println(versionP)
 							featureVersion := database.FeatureVersion{
 								Feature: database.Feature{
 									Namespace: database.Namespace{
@@ -338,7 +336,7 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 									},
 									Name: nameP,
 								},
-								Version: versionfmt.MaxVersion,
+								Version: versionP,
 							}
 							vuln.FixedIn = append(vuln.FixedIn, featureVersion)
 						}
