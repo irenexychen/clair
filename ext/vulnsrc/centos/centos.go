@@ -14,7 +14,10 @@
 // Package centos implements a vulnerability source updater using the
 // RedHat security data api, cross-checked with the CESA list from Centos Announce
 
-// TODO: correlate CESA information with RH, see centos_cve_scanner.py
+
+
+// TODO: correlate CESA information with RH, see centos_cve_scanner.py 
+
 
 package centos
 
@@ -24,7 +27,6 @@ import (
 
 	"fmt"
 	"io"
-
 	//"regexp"
 	//"strconv"
 	"strings"
@@ -41,69 +43,70 @@ import (
 )
 
 const (
-	cveURLPrefix = "https://access.redhat.com/labs/securitydataapi/"
-	cveURL       = "https://access.redhat.com/labs/securitydataapi/cve.json"
-	ovalURL      = "https://access.redhat.com/labs/securitydataapi/oval.json"
-	cesaURL      = "http://cefs.steve-meier.de/errata.latest.xml"
-	updaterFlag  = "centosUpdater"
+	cveURLPrefix     = "https://access.redhat.com/labs/securitydataapi/"
+	cveURL           = "https://access.redhat.com/labs/securitydataapi/cve.json"
+	ovalURL          = "https://access.redhat.com/labs/securitydataapi/oval.json"
+	cesaURL          = "http://cefs.steve-meier.de/errata.latest.xml"
+	updaterFlag      = "centosUpdater"
 
-	affectedType = database.BinaryPackage
+	affectedType     = database.BinaryPackage
 )
 
-type updater struct{}
+type updater struct {}
 
-func init() {
-	vulnsrc.RegisterUpdater("centos", &updater{})
-	log.WithField("package", "CentOS").Info("is registered")
-
+func init() { 
+	vulnsrc.RegisterUpdater("centos", &updater{}) 
 }
 
 func (u *updater) Clean() {}
 
+
 type CVES []struct {
-	CVEName             string    `json:"CVE"`
-	Severity            string    `json:"severity"`
-	Date                time.Time `json:"public_date"`
-	Advisories          []string  `json:"advisories"`
-	Bugzilla            string    `json:"bugzilla"`
-	BugzillaDescription string    `json:"bugzilla_description"`
-	CWE                 string    `json:"CWE"`
-	AffectedPackages    []string  `json:"affected_packages"`
-	ResourceURL         string    `json:"resource_url"`
-	Cvss3Score          float64   `json:"cvss3_score"`
+	CVEName             string      `json:"CVE"`
+	Severity            string      `json:"severity"`
+	Date                time.Time   `json:"public_date"`
+	Advisories          []string    `json:"advisories"`
+	Bugzilla            string      `json:"bugzilla"`
+	BugzillaDescription string      `json:"bugzilla_description"`
+	CWE                 string      `json:"CWE"`
+	AffectedPackages    []string    `json:"affected_packages"`
+	ResourceURL         string      `json:"resource_url"`
+	Cvss3Score          float64     `json:"cvss3_score"`
 }
 
 type OVAL []struct {
-	RHSA        string    `json:"RHSA"`
-	Severity    string    `json:"severity"`
-	Date        time.Time `json:"released_on"`
-	CVEs        []string  `json:"CVEs"`
-	Bugzillas   []string  `json:"bugzillas"`
-	ResourceURL string    `json:"resource_url"`
+	RHSA                string      `json:"RHSA"`
+	Severity            string      `json:"severity"`
+	Date                time.Time   `json:"released_on"`
+	CVEs                []string    `json:"CVEs"`
+	Bugzillas           []string    `json:"bugzillas"`
+	ResourceURL         string      `json:"resource_url"`
 }
 
 type CESA struct {
-	XMLName xml.Name `xml:"opt"`
-	SA      []struct {
-		Text        string   `xml:",chardata"`
-		Description string   `xml:"description,attr"`
-		From        string   `xml:"from,attr"`
-		IssueDate   string   `xml:"issue_date,attr"`
-		Notes       string   `xml:"notes,attr"`
-		Product     string   `xml:"product,attr"`
-		References  string   `xml:"references,attr"`
-		Release     string   `xml:"release,attr"`
-		Solution    string   `xml:"solution,attr"`
-		Synopsis    string   `xml:"synopsis,attr"`
-		Topic       string   `xml:"topic,attr"`
-		Type        string   `xml:"type,attr"`
-		OsRelease   string   `xml:"os_release"`
-		Packages    []string `xml:"packages"`
+	XMLName             xml.Name    `xml:"opt"`
+	SA []struct {                   
+		Text            string      `xml:",chardata"`
+		Description     string      `xml:"description,attr"`
+		From            string      `xml:"from,attr"`
+		IssueDate       string      `xml:"issue_date,attr"`
+		Notes           string      `xml:"notes,attr"`
+		Product         string      `xml:"product,attr"`
+		References      string      `xml:"references,attr"`
+		Release         string      `xml:"release,attr"`
+		Solution        string      `xml:"solution,attr"`
+		Synopsis        string      `xml:"synopsis,attr"`
+		Topic           string      `xml:"topic,attr"`
+		Type            string      `xml:"type,attr"`
+		OsRelease       string      `xml:"os_release"`
+		Packages        []string    `xml:"packages"`
 	} `xml:",any"`
 }
 
+
 func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateResponse, err error) {
 	log.WithField("package", "CentOS").Info("start fetching vulnerabilities")
+	
 
 	r_cesa, err := httputil.GetWithUserAgent(cesaURL)
 	if err != nil {
@@ -117,8 +120,10 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 	}
 	resp, err = buildResponse(r_cesa.Body)
 
-	//    r_cve, err := httputil.GetWithUserAgent(cveURL)
-	//    if err != nil {
+
+
+ //    r_cve, err := httputil.GetWithUserAgent(cveURL)
+ //    if err != nil {
 	//  log.WithError(err).Error("could not download CVEs from RH API update")
 	//  return resp, commonerr.ErrCouldNotDownload
 	// }
@@ -128,8 +133,9 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 	//  return resp, commonerr.ErrCouldNotDownload
 	// }
 
-	//    r_oval, err := httputil.GetWithUserAgent(ovalURL)
-	//    if err != nil {
+
+ //    r_oval, err := httputil.GetWithUserAgent(ovalURL)
+ //    if err != nil {
 	//  log.WithError(err).Error("could not download OVALs from RH API update")
 	//  return resp, commonerr.ErrCouldNotDownload
 	// }
@@ -139,18 +145,21 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 	//  return resp, commonerr.ErrCouldNotDownload
 	// }
 
+
 	// resp, err = buildResponse(r_cesa.Body, r_cve.Body, r_oval.Body)
 	// if err != nil{
 	//  return resp, err
 	// }
 
-	return resp, nil
+	return resp, nil 
 }
+
 
 // func buildResponse(cesaReader io.Reader, cveReader io.Reader, ovalReader io.Reader) (resp vulnsrc.UpdateResponse, err error) {
 func buildResponse(cesaReader io.Reader) (resp vulnsrc.UpdateResponse, err error) {
 
 	// Parse CESA into vulnerability db
+
 
 	log.WithField("package", "CentOS").Info("building response aaaaaaaaaaaaaaaaaa")
 
@@ -171,6 +180,7 @@ func buildResponse(cesaReader io.Reader) (resp vulnsrc.UpdateResponse, err error
 	// }
 	// resp.Vulnerabilities = append(resp.Vulnerabilities, resp_cve)
 
+
 	// // Unmarshal OVAL JSON
 	// // Extract vulnerability data from unmarshalled OVAL JSON schema
 	// resp_oval, err = parseRHSAs(ovalReader)
@@ -180,23 +190,28 @@ func buildResponse(cesaReader io.Reader) (resp vulnsrc.UpdateResponse, err error
 	// }
 	// resp.Vulnerabilities = append(resp.Vulnerabilities, resp_oval)
 
+
 	// // var unknownReleases map[string]struct{}
 	// // resp.Vulnerabilities, unknownReleases = parseCentOScveJSON(&cves)
+
 
 	// //combine responses TODOOOOOOO
 	return resp, nil
 }
 
+
 func parseCESA(cesaReader io.Reader) (vulnerabilities []database.VulnerabilityWithAffected, err error) {
-
+	
 	log.WithField("package", "CentOS").Info("parse cesa xml aaaaa")
-
+	
 	var cesas CESA
 	err = xml.NewDecoder(cesaReader).Decode(&cesas)
 	if err != nil {
 		log.WithError(err).Error("could not decode CESA's XML")
 		return vulnerabilities, commonerr.ErrCouldNotParse
 	}
+
+	
 
 	//mvulnerabilities := make(map[string]*database.VulnerabilityWithAffected)
 
@@ -206,10 +221,10 @@ func parseCESA(cesaReader io.Reader) (vulnerabilities []database.VulnerabilityWi
 		log.Info(cesa)
 
 		// if strings.Contains(cesa.Text, "CESA") && len(cesa.Packages) > 0 {
-		// 	// get vulnerability name
+		// 	// get vulnerability name 
 		// 	vulnName := cesa.Text
 		// 	// get package release number?????????/ wtf is this
-
+			
 		// 	// create vulnerability if needed
 		// 	vulnerability, vulnerabilityAlreadyExists := mvulnerabilities[cesa.Text]
 		// 	if !vulnerabilityAlreadyExists {
@@ -235,11 +250,13 @@ func parseCESA(cesaReader io.Reader) (vulnerabilities []database.VulnerabilityWi
 		// 	// determine fixed version if it exists/is resolved
 		// 	// create and add feature version
 		// 	// store the vulnerability
-		// }
+	    // }
 	}
 
 	return
 }
+
+
 
 func parseCVEs(cveReader io.Reader) (vulnerabilities []database.VulnerabilityWithAffected, err error) {
 	// var cves CVES
@@ -346,6 +363,7 @@ func parseCVEs(cveReader io.Reader) (vulnerabilities []database.VulnerabilityWit
 	return
 }
 
+
 func parseRHSAs(ovalReader io.Reader) (vulnerabilities []database.VulnerabilityWithAffected, err error) {
 	// var rhsas OVAL
 	// err = json.NewDecoder(ovalReader).Decode(&rhsas)
@@ -355,6 +373,7 @@ func parseRHSAs(ovalReader io.Reader) (vulnerabilities []database.VulnerabilityW
 	// }
 	return
 }
+
 
 func convertSeverity(sev string) database.Severity {
 	switch strings.ToLower(sev) {
@@ -373,3 +392,4 @@ func convertSeverity(sev string) database.Severity {
 		return database.UnknownSeverity
 	}
 }
+
