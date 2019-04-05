@@ -123,8 +123,6 @@ type CVE struct {
 func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateResponse, err error) {
 	log.WithField("package", "CentOS").Info("start fetching vulnerabilities")
 
-	addedEntries := make(map[string]bool)
-
 	_, err = datastore.GetKeyValue(updaterFlag)
 	if err != nil {
 		return resp, err
@@ -161,17 +159,14 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 		log.WithError(err).Error("could not read CESA body")
 		return resp, commonerr.ErrCouldNotParse
 	}
-	vCESA, addedEntries, err := parseCESA(string(data), rhsaToCve)
+	vCESA, _, err := parseCESA(string(data), rhsaToCve)
 	if err != nil {
 		return resp, err
 	}
 	for _, v := range vCESA {
 		resp.Vulnerabilities = append(resp.Vulnerabilities, v)
 	}
-
 	log.WithField("package", "CentOS").Info("finished populating CVEs from CESA list")
-
-	////
 
 	rCve, err := httputil.GetWithUserAgent(cveURL)
 	if err != nil {
@@ -188,7 +183,7 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 		log.WithError(err).Error("could not read CVE body")
 		return resp, commonerr.ErrCouldNotParse
 	}
-	vCve, errCve := parseCVE(string(data), addedEntries)
+	vCve, errCve := parseCVE(string(data))
 	if errCve != nil {
 		return resp, errCve
 	}
@@ -270,7 +265,7 @@ func parseCESA(cesaData string, rhsaToCve map[string][]string) (vulnerabilities 
 	return vulnerabilities, addedEntries, nil
 }
 
-func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []database.Vulnerability, err error) {
+func parseCVE(cveData string) (vulnerabilities []database.Vulnerability, err error) {
 	log.WithField("package", "CentOS").Info("Parsing CVES json")
 
 	var cves CVES
@@ -282,81 +277,79 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 	log.WithField("package", "CentOS").Info("Decoded CVES json")
 
 	for _, cve := range cves {
-		_, ok := addedEntries[cve.CVEName]
-		//not already added from CESA list
-		if !ok && (len(cve.AffectedPackages) > 0) && (cve.Severity != "") {
-			r, err := httputil.GetWithUserAgent(baseURL + cve.CVEName + ".json")
-			defer r.Body.Close()
-			data, err := ioutil.ReadAll(r.Body)
-			if err == nil && httputil.Status2xx(r) {
-				var c CVE
-				json.Unmarshal([]byte(data), &c)
-				var vuln database.Vulnerability
-				vuln.Name = c.Name
-				url := strings.Split(c.Bugzilla.URL, " ")
-				vuln.Link = url[0]
-				vuln.Description = c.Bugzilla.Description
-				vuln.Severity = convertSeverity(c.ThreatSeverity)
+		r, err := httputil.GetWithUserAgent(strings.TrimSpace(cve.ResourceURL))
+		defer r.Body.Close()
+		data, err := ioutil.ReadAll(r.Body)
 
-				if len(c.PackageState) > 0 {
-					for _, pack := range c.PackageState {
-						rhelPlatform, _ := regexp.Match(`red hat enterprise linux .`, []byte(strings.ToLower(pack.ProductName)))
-						if rhelPlatform && (strings.ToLower(pack.FixState) != "not affected") {
-							var versionP string
-							switch strings.ToLower(strings.TrimSpace(pack.FixState)) {
-							case "new", "affected", "will not fix":
-								versionP = versionfmt.MaxVersion
-							case "not affected":
-								versionP = versionfmt.MinVersion
-							default:
-								versionP = strings.TrimSpace(pack.FixState)
-							}
-							featureVersion := database.FeatureVersion{
-								Feature: database.Feature{
-									Namespace: database.Namespace{
-										Name:          "centos:" + pack.ProductName[len(pack.ProductName)-1:],
-										VersionFormat: rpm.ParserName,
-									},
-									Name: pack.PackageName,
-								},
-								Version: versionP,
-							}
-							vuln.FixedIn = append(vuln.FixedIn, featureVersion)
+		if err == nil || httputil.Status2xx(r) {
+			var c CVE
+			json.Unmarshal([]byte(data), &c)
+			url := strings.Split(c.Bugzilla.URL, " ")
+
+			var vuln database.Vulnerability
+			vuln.Name = c.Name
+			vuln.Link = url[0]
+			vuln.Description = c.Bugzilla.Description
+			vuln.Severity = convertSeverity(c.ThreatSeverity)
+
+			if len(c.PackageState) > 0 {
+				for _, pack := range c.PackageState {
+					rhelPlatform, _ := regexp.Match(`red hat enterprise linux .`, []byte(strings.ToLower(pack.ProductName)))
+					if rhelPlatform && (strings.ToLower(pack.FixState) != "not affected") {
+						var versionP string
+						switch strings.ToLower(strings.TrimSpace(pack.FixState)) {
+						case "new", "affected", "will not fix":
+							versionP = versionfmt.MaxVersion
+						case "not affected":
+							versionP = versionfmt.MinVersion
+						default:
+							versionP = strings.TrimSpace(pack.FixState)
 						}
-					}
-				} else { //use c.AffectedRelease field
-					for _, pack := range c.AffectedRelease {
-						rhelPlatform, _ := regexp.Match(`red hat enterprise linux .`, []byte(strings.ToLower(pack.ProductName)))
-						if rhelPlatform && pack.Package != "" {
-							nameP, versionP := parseRPM(pack.Package)
-							featureVersion := database.FeatureVersion{
-								Feature: database.Feature{
-									Namespace: database.Namespace{
-										Name:          "centos:" + pack.ProductName[len(pack.ProductName)-1:],
-										VersionFormat: rpm.ParserName,
-									},
-									Name: nameP,
+						featureVersion := database.FeatureVersion{
+							Feature: database.Feature{
+								Namespace: database.Namespace{
+									Name:          "centos:" + pack.ProductName[len(pack.ProductName)-1:],
+									VersionFormat: rpm.ParserName,
 								},
-								Version: versionP,
-							}
-							vuln.FixedIn = append(vuln.FixedIn, featureVersion)
+								Name: pack.PackageName,
+							},
+							Version: versionP,
 						}
+						vuln.FixedIn = append(vuln.FixedIn, featureVersion)
 					}
 				}
-				if len(vuln.FixedIn) > 0 { //assert CVE has relevant packages
-					vulnerabilities = append(vulnerabilities, vuln)
+			} else { //use c.AffectedRelease field
+				for _, pack := range c.AffectedRelease {
+					rhelPlatform, _ := regexp.Match(`red hat enterprise linux .`, []byte(strings.ToLower(pack.ProductName)))
+					if rhelPlatform && pack.Package != "" {
+						nameP, versionP := parseRPM(pack.Package)
+						featureVersion := database.FeatureVersion{
+							Feature: database.Feature{
+								Namespace: database.Namespace{
+									Name:          "centos:" + pack.ProductName[len(pack.ProductName)-1:],
+									VersionFormat: rpm.ParserName,
+								},
+								Name: nameP,
+							},
+							Version: versionP,
+						}
+						vuln.FixedIn = append(vuln.FixedIn, featureVersion)
+					}
 				}
-
-			} else {
-				log.WithError(err).Error("could not download " + cve.CVEName + " from RH API update, skipping")
 			}
+			if len(vuln.FixedIn) > 0 { //assert CVE has relevant packages
+				vulnerabilities = append(vulnerabilities, vuln)
+			}
+		} else {
+			log.WithError(err).Error("could not download " + cve.CVEName + " from RH API update, skipping")
+			// return resp, commonerr.ErrCouldNotDownload
+			// SKIP THIS CVE
 		}
 	}
 	log.WithField("package", "CentOS").Info("finished parsing CVE vulnerabilities")
-	fmt.Println(len(vulnerabilities))
-	return vulnerabilities, nil
-}
 
+	return
+}
 func convertSeverity(sev string) database.Severity {
 	switch strings.ToLower(sev) {
 	case "none", "n/a":
