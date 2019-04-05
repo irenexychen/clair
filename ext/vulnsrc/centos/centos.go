@@ -12,9 +12,7 @@
 // limitations under the License.
 
 // Package centos implements a vulnerability source updater using the
-// RedHat security data api, cross-checked with the CESA list from Centos Announce
-
-// TODO: correlate CESA information with RH, see centos_cve_scanner.py
+// list of CESA from Centos Announce and the RedHat Security Data API
 
 package centos
 
@@ -273,7 +271,6 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 
 	var cves CVES
 	err = json.Unmarshal([]byte(cveData), &cves)
-
 	if err != nil {
 		log.WithError(err).Error("could not decode CVES json")
 		return vulnerabilities, commonerr.ErrCouldNotParse
