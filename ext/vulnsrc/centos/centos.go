@@ -237,26 +237,33 @@ func parseCESA(cesaData string, rhsaToCve map[string][]string) (vulnerabilities 
 				vuln.Link = url[0]
 				vuln.Description = sa.Description
 				vuln.Severity = convertSeverity(sa.Severity)
+				addedPacks := make(map[string]bool)
+
 				for _, pack := range sa.Packages {
+
 					err = versionfmt.Valid(rpm.ParserName, strings.TrimSpace(pack))
-					_, versionP := parseRPM(pack)
-					if err != nil {
-						log.WithError(err).WithField("version", pack).Warning("could not parse package version. skipping")
-					} else {
-						featureVersion := database.FeatureVersion{
-							Feature: database.Feature{
-								Namespace: database.Namespace{
-									Name:          "centos:" + sa.OsRelease,
-									VersionFormat: rpm.ParserName,
+					nameP, versionP := parseRPM(pack)
+					if _, ok := addedPacks[nameP]; !ok {
+						if err != nil {
+							log.WithError(err).WithField("version", pack).Warning("could not parse package version. skipping")
+						} else {
+							featureVersion := database.FeatureVersion{
+								Feature: database.Feature{
+									Namespace: database.Namespace{
+										Name:          "centos:" + sa.OsRelease,
+										VersionFormat: rpm.ParserName,
+									},
+									Name: nameP,
 								},
-								Name: strings.TrimSpace(pack),
-							},
-							Version: versionP,
+								Version: versionP,
+							}
+							vuln.FixedIn = append(vuln.FixedIn, featureVersion)
+							addedPacks[nameP] = true
 						}
-						vuln.FixedIn = append(vuln.FixedIn, featureVersion)
+						vulnerabilities = append(vulnerabilities, vuln)
+						addedEntries[name] = true
 					}
-					vulnerabilities = append(vulnerabilities, vuln)
-					addedEntries[name] = true
+
 				}
 			}
 		}
@@ -378,6 +385,7 @@ func resolveCESAName(CESA string, URL string, rhsaToCve map[string][]string) (cv
 	urls := strings.Split(URL, " ")
 	RHSA := strings.Replace(CESA, "CE", "RH", 1)
 	RHSA = strings.Replace(RHSA, "--", ":", 1)
+
 	if _, ok := rhsaToCve[RHSA]; ok {
 		return rhsaToCve[RHSA]
 	} else {
@@ -398,6 +406,12 @@ func resolveCESAName(CESA string, URL string, rhsaToCve map[string][]string) (cv
 
 func parseRPM(packInfo string) (nameP string, versionP string) {
 	packInfo = strings.Replace(packInfo, ".rpm", "", 1)
+	packInfo = strings.Replace(packInfo, ".centos", "", 1)
+	packInfo = strings.Replace(packInfo, ".src", "", 1)
+	packInfo = strings.Replace(packInfo, ".x86_64", "", 1)
+	packInfo = strings.Replace(packInfo, ".i686", "", 1)
+	packInfo = strings.Replace(packInfo, ".noarch", "", 1)
+
 	re := regexp.MustCompile(`(-| )(1|2|3|4|5|6|7|8|9|0)`)
 	splitIndex := re.FindStringIndex(packInfo)
 	if len(splitIndex) >= 2 {

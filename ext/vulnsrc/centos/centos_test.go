@@ -15,6 +15,7 @@
 package centos
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -31,12 +32,14 @@ func TestCESAParser(t *testing.T) {
 	path := filepath.Join(filepath.Dir(filename))
 
 	// Test parsing testdata/mini_errata.xml
-	testFile, _ := os.Open(path + "/testdata/mini_errata.xml")
+	testFile, _ := os.Open(path + "/testdata/mini_cesa_errata.xml")
 	m := make(map[string][]string)
 	m["RHSA-2018:2881"] = []string{"CVE-2018-12386", "CVE-2018-12387"}
 	data, err := ioutil.ReadAll(testFile)
 
-	vulnerabilities, addedEntries, err := parseCESA(string(data), m)
+	vulnerabilities, _, err := parseCESA(string(data), m)
+	fmt.Println(vulnerabilities)
+
 	if assert.Nil(t, err) && assert.Len(t, vulnerabilities, 2) {
 		assert.Equal(t, "CVE-2018-12386", vulnerabilities[0].Name)
 		assert.Equal(t, "CVE-2018-12387", vulnerabilities[1].Name)
@@ -47,78 +50,18 @@ func TestCESAParser(t *testing.T) {
 		assert.Equal(t, `Not available`, vulnerabilities[0].Description)
 		assert.Equal(t, `Not available`, vulnerabilities[1].Description)
 
-		expectedFeatureVersions := []database.FeatureVersion{
-			{
-				Feature: database.Feature{
-					Namespace: database.Namespace{
-						Name:          "centos:6",
-						VersionFormat: rpm.ParserName,
-					},
-					Name: "firefox",
+		expectedFeatureVersion := database.FeatureVersion{
+			Feature: database.Feature{
+				Namespace: database.Namespace{
+					Name:          "centos:6",
+					VersionFormat: rpm.ParserName,
 				},
-				Version: "0:3.1.1-7.el7_1",
+				Name: "firefox",
 			},
-			{
-				Feature: database.Feature{
-					Namespace: database.Namespace{
-						Name:          "centos:7",
-						VersionFormat: rpm.ParserName,
-					},
-					Name: "xerces-c-devel",
-				},
-				Version: "0:3.1.1-7.el7_1",
-			},
-			{
-				Feature: database.Feature{
-					Namespace: database.Namespace{
-						Name:          "centos:7",
-						VersionFormat: rpm.ParserName,
-					},
-					Name: "xerces-c-doc",
-				},
-				Version: "0:3.1.1-7.el7_1",
-			},
+			Version: "60.2.2-1.el6",
 		}
 
-		for _, expectedFeatureVersion := range expectedFeatureVersions {
-			assert.Contains(t, vulnerabilities[0].FixedIn, expectedFeatureVersion)
-		}
-	}
-
-	// Test parsing testdata/fetcher_rhel_test.2.xml
-	testFile, _ = os.Open(path + "/testdata/fetcher_rhel_test.2.xml")
-	vulnerabilities, err = parseRHSA(testFile)
-	if assert.Nil(t, err) && assert.Len(t, vulnerabilities, 1) {
-		assert.Equal(t, "RHSA-2015:1207", vulnerabilities[0].Name)
-		assert.Equal(t, "https://rhn.redhat.com/errata/RHSA-2015-1207.html", vulnerabilities[0].Link)
-		assert.Equal(t, database.CriticalSeverity, vulnerabilities[0].Severity)
-		assert.Equal(t, `Mozilla Firefox is an open source web browser. XULRunner provides the XUL Runtime environment for Mozilla Firefox. Several flaws were found in the processing of malformed web content. A web page containing malicious content could cause Firefox to crash or, potentially, execute arbitrary code with the privileges of the user running Firefox.`, vulnerabilities[0].Description)
-
-		expectedFeatureVersions := []database.FeatureVersion{
-			{
-				Feature: database.Feature{
-					Namespace: database.Namespace{
-						Name:          "centos:6",
-						VersionFormat: rpm.ParserName,
-					},
-					Name: "firefox",
-				},
-				Version: "0:38.1.0-1.el6_6",
-			},
-			{
-				Feature: database.Feature{
-					Namespace: database.Namespace{
-						Name:          "centos:7",
-						VersionFormat: rpm.ParserName,
-					},
-					Name: "firefox",
-				},
-				Version: "0:38.1.0-1.el7_1",
-			},
-		}
-
-		for _, expectedFeatureVersion := range expectedFeatureVersions {
-			assert.Contains(t, vulnerabilities[0].FixedIn, expectedFeatureVersion)
-		}
+		assert.Contains(t, vulnerabilities[0].FixedIn, expectedFeatureVersion)
+		assert.Contains(t, vulnerabilities[1].FixedIn, expectedFeatureVersion)
 	}
 }

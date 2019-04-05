@@ -302,10 +302,6 @@ func addMetadata(datastore database.Datastore, vulnerabilities []database.Vulner
 
 	wg.Wait()
 
-	// for i, vulnerability := range vulnerabilities {
-	// 	fmt.Println(i, vulnerability)
-	// }
-
 	return vulnerabilities
 }
 
