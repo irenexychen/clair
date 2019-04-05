@@ -58,9 +58,8 @@ import (
 	_ "github.com/coreos/clair/ext/vulnsrc/debian"
 	_ "github.com/coreos/clair/ext/vulnsrc/oracle"
 	_ "github.com/coreos/clair/ext/vulnsrc/rhel"
-	// _ "github.com/coreos/clair/ext/vulnsrc/suse"
+	_ "github.com/coreos/clair/ext/vulnsrc/suse"
 	_ "github.com/coreos/clair/ext/vulnsrc/ubuntu"
-	_ "github.com/coreos/clair/ext/vulnsrc/centos"
 )
 
 // MaxDBConnectionAttempts is the total number of tries that Clair will use to
