@@ -25,7 +25,7 @@ import (
 	"encoding/xml"
 	// "encoding/json"
 
-	"fmt"
+	// "fmt"
 	"io"
 	//"regexp"
 	//"strconv"
@@ -52,11 +52,9 @@ const (
 	affectedType     = database.BinaryPackage
 )
 
-type updater struct {}
+type updater struct { repositoryLocalPath string }
 
-func init() { 
-	vulnsrc.RegisterUpdater("centos", &updater{}) 
-}
+func init() { vulnsrc.RegisterUpdater("centos", &updater{}) }
 
 func (u *updater) Clean() {}
 
@@ -108,8 +106,8 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 	log.WithField("package", "CentOS").Info("start fetching vulnerabilities")
 	
 
-	r_cesa, err := httputil.GetWithUserAgent(cesaURL)
-	if err != nil {
+    r_cesa, err := httputil.GetWithUserAgent(cesaURL)
+    if err != nil {
 		log.WithError(err).Error("could not download CESA's errata update")
 		return resp, commonerr.ErrCouldNotDownload
 	}
@@ -124,31 +122,31 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 
  //    r_cve, err := httputil.GetWithUserAgent(cveURL)
  //    if err != nil {
-	//  log.WithError(err).Error("could not download CVEs from RH API update")
-	//  return resp, commonerr.ErrCouldNotDownload
+	// 	log.WithError(err).Error("could not download CVEs from RH API update")
+	// 	return resp, commonerr.ErrCouldNotDownload
 	// }
 	// defer r_cve.Body.Close()
 	// if !httputil.Status2xx(r_cve) {
-	//  log.WithField("StatusCode", r_cesa.StatusCode).Error("Failed to update CentOS CVE db from API")
-	//  return resp, commonerr.ErrCouldNotDownload
+	// 	log.WithField("StatusCode", r_cesa.StatusCode).Error("Failed to update CentOS CVE db from API")
+	// 	return resp, commonerr.ErrCouldNotDownload
 	// }
 
 
  //    r_oval, err := httputil.GetWithUserAgent(ovalURL)
  //    if err != nil {
-	//  log.WithError(err).Error("could not download OVALs from RH API update")
-	//  return resp, commonerr.ErrCouldNotDownload
+	// 	log.WithError(err).Error("could not download OVALs from RH API update")
+	// 	return resp, commonerr.ErrCouldNotDownload
 	// }
 	// defer r_oval.Body.Close()
 	// if !httputil.Status2xx(r_oval) {
-	//  log.WithField("StatusCode", r_cesa.StatusCode).Error("Failed to update CentOS CESA db")
-	//  return resp, commonerr.ErrCouldNotDownload
+	// 	log.WithField("StatusCode", r_cesa.StatusCode).Error("Failed to update CentOS CESA db")
+	// 	return resp, commonerr.ErrCouldNotDownload
 	// }
 
 
 	// resp, err = buildResponse(r_cesa.Body, r_cve.Body, r_oval.Body)
 	// if err != nil{
-	//  return resp, err
+	// 	return resp, err
 	// }
 
 	return resp, nil 
@@ -161,10 +159,9 @@ func buildResponse(cesaReader io.Reader) (resp vulnsrc.UpdateResponse, err error
 	// Parse CESA into vulnerability db
 
 
-	log.WithField("package", "CentOS").Info("building response aaaaaaaaaaaaaaaaaa")
 
 	resp_cesa, err_cesa := parseCESA(cesaReader)
-	if err_cesa != nil {
+    if err_cesa != nil {
 		log.WithError(err).Error("could not parse CESA's errata update")
 		return resp, commonerr.ErrCouldNotParse
 	}
@@ -175,8 +172,8 @@ func buildResponse(cesaReader io.Reader) (resp vulnsrc.UpdateResponse, err error
 	// // Extract vulnerability data from unmarshalled CVE JSON schema into db
 	// resp_cve, err = parseCVEs(cveReader)
 	// if err != nil {
-	//  log.WithError(err).Error("could not parse CVEs from RH API")
-	//  return resp, commonerr.ErrCouldNotParse
+	// 	log.WithError(err).Error("could not parse CVEs from RH API")
+	// 	return resp, commonerr.ErrCouldNotParse
 	// }
 	// resp.Vulnerabilities = append(resp.Vulnerabilities, resp_cve)
 
@@ -185,8 +182,8 @@ func buildResponse(cesaReader io.Reader) (resp vulnsrc.UpdateResponse, err error
 	// // Extract vulnerability data from unmarshalled OVAL JSON schema
 	// resp_oval, err = parseRHSAs(ovalReader)
 	// if err != nil {
-	//  log.WithError(err).Error("could not parse RHSAs from RH API")
-	//  return resp, commonerr.ErrCouldNotParse
+	// 	log.WithError(err).Error("could not parse RHSAs from RH API")
+	// 	return resp, commonerr.ErrCouldNotParse
 	// }
 	// resp.Vulnerabilities = append(resp.Vulnerabilities, resp_oval)
 
@@ -202,56 +199,62 @@ func buildResponse(cesaReader io.Reader) (resp vulnsrc.UpdateResponse, err error
 
 func parseCESA(cesaReader io.Reader) (vulnerabilities []database.VulnerabilityWithAffected, err error) {
 	
-	log.WithField("package", "CentOS").Info("parse cesa xml aaaaa")
-	
 	var cesas CESA
 	err = xml.NewDecoder(cesaReader).Decode(&cesas)
 	if err != nil {
 		log.WithError(err).Error("could not decode CESA's XML")
-		return vulnerabilities, commonerr.ErrCouldNotParse
+		return resp, commonerr.ErrCouldNotParse
 	}
 
 	
 
-	//mvulnerabilities := make(map[string]*database.VulnerabilityWithAffected)
+	// mvulnerabilities := make(map[string]*database.VulnerabilityWithAffected)
 
-	// Iterate over CESA only and collect any vulnerabilities that affect at least one package
-	for cesa := range cesas.SA {
-		fmt.Printf("aaa")
-		log.Info(cesa)
+	// // Iterate over CESA only and collect any vulnerabilities that affect at least one package
+	// for cesa := range cesas.SA {
+	// 	fmt.Printf("aaa")
+	// 	log.Info(cesa)
 
-		// if strings.Contains(cesa.Text, "CESA") && len(cesa.Packages) > 0 {
-		// 	// get vulnerability name 
-		// 	vulnName := cesa.Text
-		// 	// get package release number?????????/ wtf is this
+	// 	if strings.Contains(cesa.Text, "CESA") && len(cesa.Packages) > 0 {
+	// 		// get vulnerability name 
+	// 		vulnName := cesa.Text
+
+	// 		// get package release number?????????/ wtf is this
 			
-		// 	// create vulnerability if needed
-		// 	vulnerability, vulnerabilityAlreadyExists := mvulnerabilities[cesa.Text]
-		// 	if !vulnerabilityAlreadyExists {
-		// 		db_sev = convertSeverity(cesa.Severity)
-		// 		vulnerability = &database.VulnerabilityWithAffected{
-		// 			Vulnerability: database.Vulnerability{
-		// 				Name:        cesa.Text,
-		// 				Link:        cesa.References,
-		// 				Severity:    db_sev,
-		// 				Description: cesa.Description,
-		// 			},
-		// 		}
-		// 		pkgs := toFeature(cesa.Packages)
-		// 		for _, p := range pkgs {
-		// 			vulnerability.Affected = append(vulnerability.Affected, p)
-		// 		}
-		// 		vulnerabilities = append(vulnerabilities, vulnerability)
-		// 	}
-		// 	// export packages to proper format
-		// 	// determine version of the package that the vulnerability affects
-		// 	var version string
-		// 	var err error
-		// 	// determine fixed version if it exists/is resolved
-		// 	// create and add feature version
-		// 	// store the vulnerability
-	    // }
-	}
+	// 		// create vulnerability if needed
+	// 		vulnerability, vulnerabilityAlreadyExists := mvulnerabilities[cesa.Text]
+	// 		if !vulnerabilityAlreadyExists {
+	// 			db_sev = convertSeverity(cesa.Severity)
+	// 			vulnerability = &database.VulnerabilityWithAffected{
+	// 				Vulnerability: database.Vulnerability{
+	// 					Name:        cesa.Text,
+	// 					Link:        cesa.References,
+	// 					Severity:    db_sev,
+	// 					Description: cesa.Description,
+	// 				},
+	// 			}
+
+	// 			pkgs := toFeature(cesa.Packages)
+	// 			for _, p := range pkgs {
+	// 				vulnerability.Affected = append(vulnerability.Affected, p)
+	// 			}
+
+	// 			vulnerabilities = append(vulnerabilities, vulnerability)
+	// 		}
+	// 		// export packages to proper format
+
+
+	// 		// determine version of the package that the vulnerability affects
+
+	// 		var version string
+	// 		var err error
+
+	// 		// determine fixed version if it exists/is resolved
+	// 		// create and add feature version
+	// 		// store the vulnerability
+
+	// 	}
+	// }
 
 	return
 }
@@ -262,114 +265,115 @@ func parseCVEs(cveReader io.Reader) (vulnerabilities []database.VulnerabilityWit
 	// var cves CVES
 	// err = json.NewDecoder(cveReader).Decode(&cves)
 	// if err != nil {
-	//  log.WithError(err).Error("could not unmarshal CVE JSON from RH API")
-	//  return resp, commonerr.ErrCouldNotParse
+	// 	log.WithError(err).Error("could not unmarshal CVE JSON from RH API")
+	// 	return resp, commonerr.ErrCouldNotParse
 	// }
 
 	// mvulnerabilities := make(map[string]*database.VulnerabilityWithAffected)
 	// unknownReleases = make(map[string]struct{})
 
 	// for pkgName, pkgNode := range *cves {
-	//  for vulnName, vulnNode := range pkgNode {
-	//      for releaseName, releaseNode := range vulnNode.Releases {
-	//          // Attempt to detect the release number.
-	//          if _, isReleaseKnown := database.DebianReleasesMapping[releaseName]; !isReleaseKnown {
-	//              unknownReleases[releaseName] = struct{}{}
-	//              continue
-	//          }
+	// 	for vulnName, vulnNode := range pkgNode {
+	// 		for releaseName, releaseNode := range vulnNode.Releases {
+	// 			// Attempt to detect the release number.
+	// 			if _, isReleaseKnown := database.DebianReleasesMapping[releaseName]; !isReleaseKnown {
+	// 				unknownReleases[releaseName] = struct{}{}
+	// 				continue
+	// 			}
 
-	//          // Skip if the status is not determined or the vulnerability is a temporary one.
-	//          // TODO: maybe add "undetermined" as Unknown severity.
-	//          if !strings.HasPrefix(vulnName, "CVE-") || releaseNode.Status == "undetermined" {
-	//              continue
-	//          }
+	// 			// Skip if the status is not determined or the vulnerability is a temporary one.
+	// 			// TODO: maybe add "undetermined" as Unknown severity.
+	// 			if !strings.HasPrefix(vulnName, "CVE-") || releaseNode.Status == "undetermined" {
+	// 				continue
+	// 			}
 
-	//          // Get or create the vulnerability.
-	//          vulnerability, vulnerabilityAlreadyExists := mvulnerabilities[vulnName]
-	//          if !vulnerabilityAlreadyExists {
-	//              vulnerability = &database.VulnerabilityWithAffected{
-	//                  Vulnerability: database.Vulnerability{
-	//                      Name:        vulnName,
-	//                      Link:        strings.Join([]string{cveURLPrefix, "/", vulnName}, ""),
-	//                      Severity:    database.UnknownSeverity,
-	//                      Description: vulnNode.Description,
-	//                  },
-	//              }
-	//          }
+	// 			// Get or create the vulnerability.
+	// 			vulnerability, vulnerabilityAlreadyExists := mvulnerabilities[vulnName]
+	// 			if !vulnerabilityAlreadyExists {
+	// 				vulnerability = &database.VulnerabilityWithAffected{
+	// 					Vulnerability: database.Vulnerability{
+	// 						Name:        vulnName,
+	// 						Link:        strings.Join([]string{cveURLPrefix, "/", vulnName}, ""),
+	// 						Severity:    database.UnknownSeverity,
+	// 						Description: vulnNode.Description,
+	// 					},
+	// 				}
+	// 			}
 
-	//          // Set the priority of the vulnerability.
-	//          // In the JSON, a vulnerability has one urgency per package it affects.
-	//          severity := SeverityFromUrgency(releaseNode.Urgency)
-	//          if severity.Compare(vulnerability.Severity) > 0 {
-	//              // The highest urgency should be the one set.
-	//              vulnerability.Severity = severity
-	//          }
+	// 			// Set the priority of the vulnerability.
+	// 			// In the JSON, a vulnerability has one urgency per package it affects.
+	// 			severity := SeverityFromUrgency(releaseNode.Urgency)
+	// 			if severity.Compare(vulnerability.Severity) > 0 {
+	// 				// The highest urgency should be the one set.
+	// 				vulnerability.Severity = severity
+	// 			}
 
-	//          // Determine the version of the package the vulnerability affects.
-	//          var version string
-	//          var err error
-	//          if releaseNode.Status == "open" {
-	//              // Open means that the package is currently vulnerable in the latest
-	//              // version of this Debian release.
-	//              version = versionfmt.MaxVersion
-	//          } else if releaseNode.Status == "resolved" {
-	//              // Resolved means that the vulnerability has been fixed in
-	//              // "fixed_version" (if affected).
-	//              err = versionfmt.Valid(dpkg.ParserName, releaseNode.FixedVersion)
-	//              if err != nil {
-	//                  log.WithError(err).WithField("version", version).Warning("could not parse package version. skipping")
-	//                  continue
-	//              }
+	// 			// Determine the version of the package the vulnerability affects.
+	// 			var version string
+	// 			var err error
+	// 			if releaseNode.Status == "open" {
+	// 				// Open means that the package is currently vulnerable in the latest
+	// 				// version of this Debian release.
+	// 				version = versionfmt.MaxVersion
+	// 			} else if releaseNode.Status == "resolved" {
+	// 				// Resolved means that the vulnerability has been fixed in
+	// 				// "fixed_version" (if affected).
+	// 				err = versionfmt.Valid(dpkg.ParserName, releaseNode.FixedVersion)
+	// 				if err != nil {
+	// 					log.WithError(err).WithField("version", version).Warning("could not parse package version. skipping")
+	// 					continue
+	// 				}
 
-	//              // FixedVersion = "0" means that the vulnerability affecting
-	//              // current feature is not that important
-	//              if releaseNode.FixedVersion != "0" {
-	//                  version = releaseNode.FixedVersion
-	//              }
-	//          }
+	// 				// FixedVersion = "0" means that the vulnerability affecting
+	// 				// current feature is not that important
+	// 				if releaseNode.FixedVersion != "0" {
+	// 					version = releaseNode.FixedVersion
+	// 				}
+	// 			}
 
-	//          if version == "" {
-	//              continue
-	//          }
+	// 			if version == "" {
+	// 				continue
+	// 			}
 
-	//          var fixedInVersion string
-	//          if version != versionfmt.MaxVersion {
-	//              fixedInVersion = version
-	//          }
+	// 			var fixedInVersion string
+	// 			if version != versionfmt.MaxVersion {
+	// 				fixedInVersion = version
+	// 			}
 
-	//          // Create and add the feature version.
-	//          pkg := database.AffectedFeature{
-	//              FeatureType:     affectedType,
-	//              FeatureName:     pkgName,
-	//              AffectedVersion: version,
-	//              FixedInVersion:  fixedInVersion,
-	//              Namespace: database.Namespace{
-	//                  Name:          "debian:" + database.DebianReleasesMapping[releaseName],
-	//                  VersionFormat: dpkg.ParserName,
-	//              },
-	//          }
-	//          vulnerability.Affected = append(vulnerability.Affected, pkg)
+	// 			// Create and add the feature version.
+	// 			pkg := database.AffectedFeature{
+	// 				FeatureType:     affectedType,
+	// 				FeatureName:     pkgName,
+	// 				AffectedVersion: version,
+	// 				FixedInVersion:  fixedInVersion,
+	// 				Namespace: database.Namespace{
+	// 					Name:          "debian:" + database.DebianReleasesMapping[releaseName],
+	// 					VersionFormat: dpkg.ParserName,
+	// 				},
+	// 			}
+	// 			vulnerability.Affected = append(vulnerability.Affected, pkg)
 
-	//          // Store the vulnerability.
-	//          mvulnerabilities[vulnName] = vulnerability
-	//      }
-	//  }
+	// 			// Store the vulnerability.
+	// 			mvulnerabilities[vulnName] = vulnerability
+	// 		}
+	// 	}
 	// }
 	// // Convert the vulnerabilities map to a slice
 	// for _, v := range mvulnerabilities {
-	//  vulnerabilities = append(vulnerabilities, *v)
+	// 	vulnerabilities = append(vulnerabilities, *v)
 	// }
 
 	return
 }
 
 
+
 func parseRHSAs(ovalReader io.Reader) (vulnerabilities []database.VulnerabilityWithAffected, err error) {
 	// var rhsas OVAL
 	// err = json.NewDecoder(ovalReader).Decode(&rhsas)
 	// if err != nil {
-	//  log.WithError(err).Error("could not unmarshal RHSA OVAL JSON from RH API")
-	//  return resp, commonerr.ErrCouldNotParse
+	// 	log.WithError(err).Error("could not unmarshal RHSA OVAL JSON from RH API")
+	// 	return resp, commonerr.ErrCouldNotParse
 	// }
 	return
 }
