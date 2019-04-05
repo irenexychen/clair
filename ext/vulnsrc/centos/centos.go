@@ -241,6 +241,7 @@ func parseCESA(cesaData string, rhsaToCve map[string][]string) (vulnerabilities 
 				vuln.Severity = convertSeverity(sa.Severity)
 				for _, pack := range sa.Packages {
 					err = versionfmt.Valid(rpm.ParserName, strings.TrimSpace(pack))
+					// _, versionP := parseRPM(pack)
 					if err != nil {
 						log.WithError(err).WithField("version", pack).Warning("could not parse package version. skipping")
 					} else {
@@ -252,7 +253,7 @@ func parseCESA(cesaData string, rhsaToCve map[string][]string) (vulnerabilities 
 								},
 								Name: strings.TrimSpace(pack),
 							},
-							Version: strings.TrimSpace(pack),
+							Version: versionfmt.MaxVersion,
 						}
 						vuln.FixedIn = append(vuln.FixedIn, featureVersion)
 					}
@@ -281,6 +282,7 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 
 	for _, cve := range cves {
 		_, ok := addedEntries[cve.CVEName]
+		//not already added from CESA list
 		if !ok && (len(cve.AffectedPackages) > 0) && (cve.Severity != "") {
 			r, err := httputil.GetWithUserAgent(baseURL + cve.CVEName + ".json")
 			defer r.Body.Close()
@@ -308,7 +310,7 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 							default:
 								versionP = strings.TrimSpace(pack.FixState)
 							}
-
+							fmt.Println(versionP)
 							featureVersion := database.FeatureVersion{
 								Feature: database.Feature{
 									Namespace: database.Namespace{
@@ -317,18 +319,17 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 									},
 									Name: pack.PackageName,
 								},
-								Version: versionP,
+								Version: versionfmt.MaxVersion,
 							}
 							vuln.FixedIn = append(vuln.FixedIn, featureVersion)
 						}
-
 					}
-
 				} else { //use AffectedRelease
 					for _, pack := range c.AffectedRelease {
 						rhelPlatform, _ := regexp.Match(`red hat enterprise linux .`, []byte(strings.ToLower(pack.ProductName)))
 						if rhelPlatform && pack.Package != "" { // RHEL
-							nameP, versionP := extractCVEInfo(pack.Package)
+							nameP, versionP := parseRPM(pack.Package)
+							fmt.Println(versionP)
 							featureVersion := database.FeatureVersion{
 								Feature: database.Feature{
 									Namespace: database.Namespace{
@@ -337,13 +338,11 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 									},
 									Name: nameP,
 								},
-								Version: versionP,
+								Version: versionfmt.MaxVersion,
 							}
 							vuln.FixedIn = append(vuln.FixedIn, featureVersion)
 						}
-
 					}
-
 				}
 				if len(vuln.FixedIn) > 0 { //assert CVE has relevant packages
 					vulnerabilities = append(vulnerabilities, vuln)
@@ -402,7 +401,8 @@ func resolveCESAName(CESA string, URL string, rhsaToCve map[string][]string) (cv
 	return nil
 }
 
-func extractCVEInfo(packInfo string) (nameP string, versionP string) {
+func parseRPM(packInfo string) (nameP string, versionP string) {
+	packInfo = strings.Replace(packInfo, ".rpm", "", 1)
 	re := regexp.MustCompile(`(-| )(1|2|3|4|5|6|7|8|9|0)`)
 	splitIndex := re.FindStringIndex(packInfo)
 	if len(splitIndex) >= 2 {

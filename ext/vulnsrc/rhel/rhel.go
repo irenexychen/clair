@@ -152,6 +152,9 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 			resp.Vulnerabilities = append(resp.Vulnerabilities, v)
 		}
 	}
+	for _, v := range resp.Vulnerabilities {
+		fmt.Println(v)
+	}
 
 	// Set the flag if we found anything.
 	if len(rhsaList) > 0 {
@@ -163,7 +166,6 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 
 	return resp, nil
 }
-
 
 func (u *updater) Clean() {}
 
