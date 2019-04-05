@@ -13,7 +13,6 @@
 
 // Package centos implements a vulnerability source updater using the
 // list of CESA from Centos Announce and the RedHat Security Data API
-
 package centos
 
 import (
@@ -240,7 +239,6 @@ func parseCESA(cesaData string, rhsaToCve map[string][]string) (vulnerabilities 
 				addedPacks := make(map[string]bool)
 
 				for _, pack := range sa.Packages {
-
 					err = versionfmt.Valid(rpm.ParserName, strings.TrimSpace(pack))
 					nameP, versionP := parseRPM(pack)
 					if _, ok := addedPacks[nameP]; !ok {
@@ -263,7 +261,6 @@ func parseCESA(cesaData string, rhsaToCve map[string][]string) (vulnerabilities 
 						vulnerabilities = append(vulnerabilities, vuln)
 						addedEntries[name] = true
 					}
-
 				}
 			}
 		}
@@ -327,10 +324,10 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 							vuln.FixedIn = append(vuln.FixedIn, featureVersion)
 						}
 					}
-				} else { //use AffectedRelease
+				} else { //use c.AffectedRelease field
 					for _, pack := range c.AffectedRelease {
 						rhelPlatform, _ := regexp.Match(`red hat enterprise linux .`, []byte(strings.ToLower(pack.ProductName)))
-						if rhelPlatform && pack.Package != "" { // RHEL
+						if rhelPlatform && pack.Package != "" {
 							nameP, versionP := parseRPM(pack.Package)
 							featureVersion := database.FeatureVersion{
 								Feature: database.Feature{
@@ -352,8 +349,6 @@ func parseCVE(cveData string, addedEntries map[string]bool) (vulnerabilities []d
 
 			} else {
 				log.WithError(err).Error("could not download " + cve.CVEName + " from RH API update, skipping")
-				// return resp, commonerr.ErrCouldNotDownload
-				// SKIP THIS CVE
 			}
 		}
 	}
@@ -388,19 +383,19 @@ func resolveCESAName(CESA string, URL string, rhsaToCve map[string][]string) (cv
 
 	if _, ok := rhsaToCve[RHSA]; ok {
 		return rhsaToCve[RHSA]
-	} else {
-		for _, u := range urls {
-			if strings.Contains(u, "lists.centos.org") {
-				resp, _ := httputil.GetWithUserAgent(u)
-				defer resp.Body.Close()
-				page, _ := ioutil.ReadAll(resp.Body)
-				if strings.Contains(string(page), "CVE") {
-					temp := (string(page))[strings.Index(string(page), "CVE"):]
-					return []string{strings.Split(temp, " ")[0]}
-				}
+	}
+	for _, u := range urls {
+		if strings.Contains(u, "lists.centos.org") {
+			resp, _ := httputil.GetWithUserAgent(u)
+			defer resp.Body.Close()
+			page, _ := ioutil.ReadAll(resp.Body)
+			if strings.Contains(string(page), "CVE") {
+				temp := (string(page))[strings.Index(string(page), "CVE"):]
+				return []string{strings.Split(temp, " ")[0]}
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -419,9 +414,8 @@ func parseRPM(packInfo string) (nameP string, versionP string) {
 		nameP = strings.Replace(strings.ToLower(strings.TrimSpace(packInfo[:i])), " ", "-", -1)
 		versionP = strings.ToLower(strings.TrimSpace(packInfo[i+1:]))
 		return nameP, versionP
-	} else {
-		fmt.Println(packInfo)
 	}
+	fmt.Println(packInfo)
 	versionP = versionfmt.MaxVersion
 	return packInfo, versionP
 }
